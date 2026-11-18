@@ -1,0 +1,1 @@
+@extends('layouts.site')@section('content')<main class="wrap"><h1>Artikel & Informasi</h1><div class="grid">@forelse($items as $i)<article class="card"><h2><a href="{{ route('article',$i->slug) }}">{{ $i->title }}</a></h2><p class="muted">{{ $i->excerpt }}</p></article>@empty<p>Artikel sedang disiapkan.</p>@endforelse</div>{{ $items->links() }}</main>@endsection

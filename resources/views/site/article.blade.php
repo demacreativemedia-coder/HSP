@@ -1,0 +1,1 @@
+@extends('layouts.site')@section('content')<article class="wrap"><h1>{{ $item->title }}</h1><div class="card" style="white-space:pre-line">{{ $item->body }}</div><a href="{{ route('articles') }}">Kembali ke artikel</a></article>@endsection

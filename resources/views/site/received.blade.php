@@ -1,0 +1,2 @@
+@extends('layouts.site')
+@section('content')<section class="wrap"><div class="card" style="max-width:700px;margin:auto;text-align:center;padding:50px 25px"><span class="eyebrow">Permintaan diterima</span><h1 class="section-title">Terima kasih, data konsultasi sudah tercatat.</h1><p class="muted">Nomor referensi: <strong>{{ session('reference') }}</strong>. Nomor WhatsApp resmi sedang dikonfigurasi. Pengiriman pesan WhatsApp belum dilakukan.</p><a class="btn" href="{{ route('home') }}">Kembali ke beranda</a></div></section>@endsection

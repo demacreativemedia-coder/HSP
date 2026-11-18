@@ -1,0 +1,17 @@
+<?php
+namespace App\Http\Controllers;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use App\Models\Lead;
+use App\Models\Program;
+use App\Models\SiteSetting;
+class AdminController extends Controller {
+ public function dashboard(){return view('admin.dashboard',['total'=>Lead::count(),'new'=>Lead::where('status','baru')->count(),'registered'=>Lead::where('status','terverifikasi')->count(),'recent'=>Lead::latest()->take(8)->get(),'sources'=>Lead::selectRaw("COALESCE(NULLIF(utm_source, ''), 'Langsung') as source, COUNT(*) as total")->groupByRaw("COALESCE(NULLIF(utm_source, ''), 'Langsung')")->orderByDesc('total')->limit(8)->get(),'weekTotal'=>Lead::where('created_at','>=',now()->subDays(7))->count()]);}
+ public function leads(Request $r){$r->validate(['from'=>'nullable|date','to'=>'nullable|date|after_or_equal:from','utm_source'=>'nullable|string|max:100']);$q=Lead::with('program')->latest();if($r->filled('q')){$term=$r->input('q');$q->where(fn($b)=>$b->where('name','like','%'.$term.'%')->orWhere('phone','like','%'.$term.'%'));}if($r->filled('status'))$q->where('status',$r->input('status'));if($r->filled('utm_source'))$q->where('utm_source',$r->input('utm_source'));if($r->filled('from'))$q->whereDate('created_at','>=',$r->input('from'));if($r->filled('to'))$q->whereDate('created_at','<=',$r->input('to'));return view('admin.leads',['leads'=>$q->paginate(20)->withQueryString()]);}
+ public function updateLead(Request $r,Lead $lead){$data=$r->validate(['status'=>'required|in:baru,dihubungi,konsultasi,berminat,mendaftar,terverifikasi,tidak_merespons,menunda,batal','notes'=>'nullable|string|max:3000']);DB::transaction(function()use($lead,$data,$r){$before=$lead->status;$lead->update($data);$lead->activities()->create(['user_id'=>$r->user()->id,'action'=>'updated','details'=>'Status '.$before.' → '.$lead->status]);});\App\Support\AdminAudit::record('lead.updated',$lead);return back()->with('ok','Lead diperbarui.');}
+ public function settings(){return view('admin.settings',['settings'=>SiteSetting::pluck('value','key')]);}
+ public function saveSettings(Request $r){$data=$r->validate(['site_name'=>'required|string|max:120','site_city'=>'required|string|max:120','whatsapp'=>'required|regex:/^[0-9+ ]{9,20}$/','address'=>'nullable|string|max:500','legal_text'=>'nullable|string|max:1500','registration_fee'=>'nullable|string|max:80','training_fee'=>'nullable|string|max:80','promo_until'=>'nullable|date','hero_title'=>'nullable|string|max:180','hero_description'=>'nullable|string|max:600']);foreach($data as $k=>$v)SiteSetting::updateOrCreate(['key'=>$k],['value'=>$v??'']);\App\Support\AdminAudit::record('settings.updated');return back()->with('ok','Pengaturan tersimpan.');}
+ public function programs(){return view('admin.programs',['programs'=>Program::orderBy('sort_order')->get()]);}
+ public function saveProgram(Request $r){$data=$r->validate(['id'=>'nullable|integer|exists:programs,id','name'=>'required|string|max:120','summary'=>'nullable|string|max:1000','description'=>'nullable|string|max:10000','is_active'=>'nullable|boolean']);$id=$data['id']??null;unset($data['id']);$data['is_active']=$r->boolean('is_active');$data['slug']=Str::slug($data['name']);if($id)Program::findOrFail($id)->update($data);else Program::create($data);\App\Support\AdminAudit::record('program.saved');return back()->with('ok','Program tersimpan.');}
+}
